@@ -1,0 +1,133 @@
+#include <DHT.h>// libreria para el sensor
+#include <DHT_U.h>
+#include <LiquidCrystal.h>
+
+
+//definicion de pines
+int bombaAgua = 8; //conecatdo al pin 8
+//int ledPin=10; si necesitamos que se prenda un led
+int sensor =9;//conectado al pin 9
+int buzzer=10;
+int Tierrapin= A2;
+int ldrPin= A0;
+
+
+//variables a posterior uso
+int temp;
+int humedad;
+int HumedadTierra= 0;
+int ldrValue=0;
+float senTerm;
+
+
+DHT dht(sensor,DHT11);//(pin al que va a estar conectado,tipo de sensor)
+LiquidCrystal lcd(2,3,4,5,6,7);
+
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(bombaAgua,OUTPUT);//pin 8 como salida
+  pinMode(buzzer,OUTPUT);
+  lcd.begin(16,2);//tamaño de pantalla
+  dht.begin(); //inicializamos el sensor
+ 
+}
+
+
+void loop() {
+temp= dht.readTemperature();//en grados
+humedad = dht.readHumidity();
+ldrValue= analogRead(ldrPin);// inicializamos en la entrada analogica
+HumedadTierra= analogRead(Tierrapin);
+senTerm=dht.computeHeatIndex(temp, humedad, false);
+Serial.print(" Sensor de luz:");
+Serial.print(ldrValue);
+Serial.print(" Temperatura:");
+Serial.print(temp);
+Serial.print("°C");
+Serial.print(" Humedad:");
+Serial.print(humedad);
+Serial.print("%");
+Serial.print(" Sensación térmica:");
+Serial.print(senTerm);
+Serial.println("°C");
+Serial.print(" Sensor HumTierra:");
+Serial.print(HumedadTierra);
+delay(500);
+
+
+//se muestra en el lcd temp y humedad
+lcd.setCursor(0,0);
+lcd.print("Temperatura:"+String(temp)+"C");
+delay(5000);
+lcd.clear();
+lcd.setCursor(1,0);
+lcd.print("Humedad: "+String(humedad)+"%");
+delay(5000);
+lcd.clear();
+//prende la bomba de agua ante tierra seca
+if(HumedadTierra>=721 && HumedadTierra<=1024){
+   lcd.setCursor(0,0);
+   lcd.print("***TIERRA SECA***");
+   delay(5000);
+   digitalWrite(bombaAgua,LOW);// se activa por bajos
+   lcd.setCursor(0,0);
+   lcd.print("****REGANDO****");
+   lcd.setCursor(0,1);
+   lcd.print("       :)       ");
+   delay(5000);//5 segundos
+   lcd.clear();
+}
+else{
+   digitalWrite(bombaAgua,HIGH);// se desactiva por bajos
+   lcd.setCursor(0,0);
+   lcd.print(" TIERRA HUMEDA");
+   lcd.setCursor(0,1);
+   lcd.print("   <3   ;)   <3    ");
+   delay(5000);//5 segundos
+   lcd.clear();
+}
+
+
+//condicion de error si es que llega a suceder
+if(humedad==0) {
+   lcd.setCursor(0,0);
+   lcd.print("*****ERROR*****");
+   lcd.setCursor(0,1);
+   lcd.print("****SENSOR*****");
+   delay(5000);
+  }
+
+
+//prueba del ldr
+if(ldrValue>=1010){ //0 a 1024 van los valores analogicos? a no luz la resistencia crece
+   lcd.setCursor(0,0);
+   lcd.print("ES DE NOCHE!!");
+   delay(5000);
+   lcd.clear();
+  }else{
+   lcd.setCursor(0,0);
+   lcd.print("ES DE DIA!!");
+   delay(5000);
+   lcd.clear();
+  }
+
+
+// si hace mucho calor y esta de dia para que corran la planta
+if(ldrValue<=1010  && temp>=30){ //0 a 1024 van los valores analogicos? a no luz la resistencia crece
+   lcd.setCursor(0,0);
+   lcd.print("CUIDADO");
+   lcd.setCursor(0,1);
+   lcd.print("DEMASIADA LUZ");
+   delay(5000);
+   lcd.clear();
+
+
+   for(int rep=0;rep<3;rep++){
+   tone (buzzer,660,250);//funcion (pin de inicio, hz,tiempo mlsegundo)
+   }
+  }else
+delay(500);
+}
+
+
